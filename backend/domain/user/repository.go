@@ -9,6 +9,8 @@ type Repository interface {
 	Create(ctx context.Context, user *User) (int, error)
 	GetByUsername(ctx context.Context, username string) (*User, error)
 	GetByID(ctx context.Context, id int) (*User, error)
+	Update(ctx context.Context, user *User) error
+	Delete(ctx context.Context, id int) error
 }
 
 type sqliteRepository struct {
@@ -59,4 +61,20 @@ func (repo *sqliteRepository) GetByID(ctx context.Context, id int) (*User, error
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (repo *sqliteRepository) Update(ctx context.Context, user *User) error {
+	_, err := repo.db.ExecContext(ctx,
+		`UPDATE users SET username = ?, password_hash = ? WHERE id = ?`,
+		user.Username, user.PasswordHash, user.ID,
+	)
+	return err
+}
+
+func (repo *sqliteRepository) Delete(ctx context.Context, id int) error {
+	_, err := repo.db.ExecContext(ctx,
+		`DELETE FROM users WHERE id = ?`,
+		id,
+	)
+	return err
 }

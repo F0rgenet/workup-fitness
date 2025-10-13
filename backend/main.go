@@ -9,6 +9,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 
 	"workup_fitness/config"
+	"workup_fitness/domain/auth"
 	"workup_fitness/domain/user"
 	"workup_fitness/middleware"
 )
@@ -30,11 +31,14 @@ func main() {
 
 	userRepo := user.NewSQLiteRepository(db)
 	userService := user.NewService(userRepo)
-	userHandler := user.NewHandler(userService, config.JwtSecret)
+	authService := auth.NewService(*userService)
 
-	mux.HandleFunc("/users/register", userHandler.Register)
-	mux.HandleFunc("/users/login", userHandler.Login)
-	mux.Handle("/me", middleware.Auth(config.JwtSecret)(http.HandlerFunc(userHandler.Me)))
+	authHandler := auth.NewHandler(authService, config.JwtSecret)
+	userHandler := user.NewHandler(userService)
+
+	mux.HandleFunc("/users/register", authHandler.Register)
+	mux.HandleFunc("/users/login", authHandler.Login)
+	mux.Handle("/me", middleware.Auth(config.JwtSecret)(http.HandlerFunc(userHandler.GetPublicProfile)))
 
 	fmt.Println("Listening on port 8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))

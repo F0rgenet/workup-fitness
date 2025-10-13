@@ -3,8 +3,8 @@ package user
 import "errors"
 
 var (
-	ErrUserNotFound  = errors.New("user not found")
-	ErrInvalidCreds  = errors.New("invalid username or password")
-	ErrAlreadyExists = errors.New("user already exists")
-	ErrMissingField  = errors.New("missing field")
+	ErrUserNotFound       = errors.New("user not found")
+	ErrAlreadyExists      = errors.New("user already exists")
+	ErrMissingField       = errors.New("missing field")
+	ErrInvalidPermissions = errors.New("invalid permissions")
 )

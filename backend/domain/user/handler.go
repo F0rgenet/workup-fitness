@@ -5,116 +5,152 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
-
 	"workup_fitness/middleware"
+	"workup_fitness/pkg/httpx"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Handler struct {
 	service *Service
-	secret  string
 }
 
-func NewHandler(service *Service, secret string) *Handler {
-	return &Handler{service: service, secret: secret}
+func NewHandler(service *Service) *Handler {
+	return &Handler{service: service}
 }
 
-func prepareAuthReponse(user *User, secret string) (AuthResponse, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"userID": user.ID,
-	})
-	tokenString, err := token.SignedString([]byte(secret))
-	if err != nil {
-		return AuthResponse{}, err
-	}
-	resp := AuthResponse{
-		Token: tokenString,
-		User: &UserResponse{
-			ID:        user.ID,
-			Username:  user.Username,
-			CreatedAt: user.CreatedAt.Format(time.RFC3339),
-		},
-	}
-	return resp, nil
-}
-
-func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var req RegisterRequest
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	user, err := h.service.Register(r.Context(), req.Username, req.Password)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	resp, err := prepareAuthReponse(user, h.secret)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
-}
-
-func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var req LoginRequest
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	user, err := h.service.Login(r.Context(), req.Username, req.Password)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	resp, err := prepareAuthReponse(user, h.secret)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
-}
-
-func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetPrivateProfile(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		httpx.MethodNotAllowed(w)
 		return
 	}
 
 	ctx := r.Context()
+
 	userID := r.Context().Value(middleware.UserIDKey)
 	if userID == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		httpx.Unauthorized(w, "Unauthorized")
 		return
 	}
 
-	user, err := h.service.GetByID(ctx, int(userID.(int)))
+	var req GetProfileRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.BadRequest(w, "Invalid request body")
+		return
+	}
+
+	user, err := h.service.GetByID(ctx, req.ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httpx.InternalServerError(w, err)
+		return
+	}
+
+	var resp GetPrivateProfileResponse
+	resp.ID = user.ID
+	resp.Username = user.Username
+	resp.CreatedAt = user.CreatedAt.Format(time.RFC3339)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
+
+func (h *Handler) GetPublicProfile(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		httpx.MethodNotAllowed(w)
+		return
+	}
+
+	ctx := r.Context()
+
+	var req GetProfileRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.BadRequest(w, "Invalid request body")
+		return
+	}
+
+	user, err := h.service.GetByID(ctx, req.ID)
+
+	if err != nil {
+		httpx.InternalServerError(w, err)
+		return
+	}
+
+	var resp GetPublicProfileResponse
+	resp.ID = user.ID
+	resp.Username = user.Username
+	resp.CreatedAt = user.CreatedAt.Format(time.RFC3339)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
+
+func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		httpx.MethodNotAllowed(w)
+		return
+	}
+
+	ctx := r.Context()
+
+	var req UpdateRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.BadRequest(w, "Invalid request body")
+		return
+	}
+
+	user := &User{
+		ID:           req.ID,
+		Username:     "",
+		PasswordHash: "",
+	}
+
+	if req.Password != "" {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			httpx.InternalServerError(w, err)
+			return
+		}
+
+		user.PasswordHash = string(hashedPassword)
+	}
+
+	if req.Username != "" {
+		user.Username = req.Username
+	}
+
+	err := h.service.Update(ctx, user)
+	if err != nil {
+		httpx.InternalServerError(w, err)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(user)
+}
+
+func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		httpx.MethodNotAllowed(w)
+		return
+	}
+
+	ctx := r.Context()
+
+	var req DeleteRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.BadRequest(w, "Invalid request body")
+		return
+	}
+
+	err := h.service.Delete(ctx, req.ID)
+	if err != nil {
+		httpx.InternalServerError(w, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusAccepted)
 }
