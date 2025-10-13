@@ -1,9 +1,9 @@
 package user
 
 import (
+	"context"
 	"errors"
 	"time"
-	"context"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -18,15 +18,15 @@ func NewService(repo Repository) *Service {
 
 func (s *Service) Register(ctx context.Context, username, password string) (*User, error) {
 	if username == "" {
-		return nil, errors.New("username is required")
+		return nil, errors.Join(ErrMissingField, errors.New("username is required"))
 	}
 	if password == "" {
-		return nil, errors.New("password is required")
+		return nil, errors.Join(ErrMissingField, errors.New("password is required"))
 	}
 
 	exists, _ := s.repo.GetByUsername(ctx, username)
 	if exists != nil {
-		return nil, errors.New("username already exists")
+		return nil, ErrAlreadyExists
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -35,9 +35,9 @@ func (s *Service) Register(ctx context.Context, username, password string) (*Use
 	}
 
 	user := &User{
-		Username:  username,
+		Username:     username,
 		PasswordHash: string(hashedPassword),
-		CreatedAt: time.Now(),
+		CreatedAt:    time.Now(),
 	}
 
 	id, err := s.repo.Create(ctx, user)
@@ -53,12 +53,12 @@ func (s *Service) Register(ctx context.Context, username, password string) (*Use
 func (s *Service) Login(ctx context.Context, username, password string) (*User, error) {
 	user, err := s.repo.GetByUsername(ctx, username)
 	if err != nil {
-		return nil, err
+		return nil, ErrUserNotFound
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 	if err != nil {
-		return nil, err
+		return nil, ErrInvalidCreds
 	}
 
 	return user, nil

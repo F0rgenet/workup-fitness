@@ -1,18 +1,18 @@
 package user
 
 import (
-	"time"
-	"net/http"
 	"encoding/json"
+	"net/http"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	
+
 	"workup_fitness/middleware"
 )
 
 type Handler struct {
 	service *Service
-	secret string
+	secret  string
 }
 
 func NewHandler(service *Service, secret string) *Handler {
