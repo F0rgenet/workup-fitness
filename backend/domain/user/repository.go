@@ -21,8 +21,8 @@ func NewSQLiteRepository(db *sql.DB) Repository {
 
 func (repo *sqliteRepository) Create(ctx context.Context, user *User) (int, error) {
 	res, err := repo.db.ExecContext(ctx,
-		`INSERT INTO users (username, password, created_at) VALUES (?, ?, ?)`,
-		user.Username, user.Password, user.CreatedAt,
+		`INSERT INTO users (username, password_hash, created_at) VALUES (?, ?, ?)`,
+		user.Username, user.PasswordHash, user.CreatedAt,
 	)
 	if err != nil {
 		return 0, err
@@ -38,10 +38,10 @@ func (repo *sqliteRepository) Create(ctx context.Context, user *User) (int, erro
 func (repo *sqliteRepository) GetByUsername(ctx context.Context, username string) (*User, error) {
 	var user User
 	row := repo.db.QueryRowContext(ctx,
-		`SELECT id, username, password, created_at FROM users WHERE username = ?`,
+		`SELECT id, username, password_hash, created_at FROM users WHERE username = ?`,
 		username,
 	)
-	err := row.Scan(&user.ID, &user.Username, &user.Password, &user.CreatedAt)
+	err := row.Scan(&user.ID, &user.Username, &user.PasswordHash, &user.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -51,10 +51,10 @@ func (repo *sqliteRepository) GetByUsername(ctx context.Context, username string
 func (repo *sqliteRepository) GetByID(ctx context.Context, id int) (*User, error) {
 	var user User
 	row := repo.db.QueryRowContext(ctx,
-		`SELECT id, username, password, created_at FROM users WHERE id = ?`,
+		`SELECT id, username, password_hash, created_at FROM users WHERE id = ?`,
 		id,
 	)
-	err := row.Scan(&user.ID, &user.Username, &user.Password, &user.CreatedAt)
+	err := row.Scan(&user.ID, &user.Username, &user.PasswordHash, &user.CreatedAt)
 	if err != nil {
 		return nil, err
 	}

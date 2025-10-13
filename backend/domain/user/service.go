@@ -4,6 +4,8 @@ import (
 	"errors"
 	"time"
 	"context"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Service struct {
@@ -27,9 +29,14 @@ func (s *Service) Register(ctx context.Context, username, password string) (*Use
 		return nil, errors.New("username already exists")
 	}
 
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
 	user := &User{
 		Username:  username,
-		Password:  password,
+		PasswordHash: string(hashedPassword),
 		CreatedAt: time.Now(),
 	}
 
@@ -41,4 +48,22 @@ func (s *Service) Register(ctx context.Context, username, password string) (*Use
 	user.ID = id
 
 	return user, nil
+}
+
+func (s *Service) Login(ctx context.Context, username, password string) (*User, error) {
+	user, err := s.repo.GetByUsername(ctx, username)
+	if err != nil {
+		return nil, err
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
+func (s *Service) GetByID(ctx context.Context, id int) (*User, error) {
+	return s.repo.GetByID(ctx, id)
 }
