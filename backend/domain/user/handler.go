@@ -87,6 +87,8 @@ func (h *Handler) GetPublicProfile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
+	// TODO: Проверять мы вообще кого обновляем...
+
 	if r.Method != http.MethodPut {
 		httpx.MethodNotAllowed(w)
 		return
@@ -132,6 +134,8 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	// TODO: Проверять мы вообще кого удаляем...
+
 	if r.Method != http.MethodDelete {
 		httpx.MethodNotAllowed(w)
 		return

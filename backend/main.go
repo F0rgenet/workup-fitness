@@ -38,7 +38,10 @@ func main() {
 
 	mux.HandleFunc("/users/register", authHandler.Register)
 	mux.HandleFunc("/users/login", authHandler.Login)
-	mux.Handle("/me", middleware.Auth(config.JwtSecret)(http.HandlerFunc(userHandler.GetPublicProfile)))
+	mux.HandleFunc("/public", userHandler.GetPublicProfile)
+	mux.Handle("/me", middleware.Auth(config.JwtSecret)(http.HandlerFunc(userHandler.GetPrivateProfile)))
+	mux.Handle("/profile/update", middleware.Auth(config.JwtSecret)(http.HandlerFunc(userHandler.Update)))
+	mux.Handle("/profile/delete", middleware.Auth(config.JwtSecret)(http.HandlerFunc(userHandler.Delete)))
 
 	fmt.Println("Listening on port 8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
