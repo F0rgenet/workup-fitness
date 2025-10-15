@@ -6,18 +6,16 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	_ "github.com/mattn/go-sqlite3"
 
 	"workup_fitness/config"
 	"workup_fitness/domain/auth"
 	"workup_fitness/domain/user"
-	"workup_fitness/middleware"
 )
 
 func main() {
 	config.LoadConfig()
-
-	mux := http.NewServeMux()
 
 	db, err := sql.Open("sqlite3", "./database.sqlite")
 	if err != nil {
@@ -31,18 +29,15 @@ func main() {
 
 	userRepo := user.NewSQLiteRepository(db)
 	userService := user.NewService(userRepo)
-	authService := auth.NewService(*userService)
-
-	authHandler := auth.NewHandler(authService, config.JwtSecret)
 	userHandler := user.NewHandler(userService)
 
-	mux.HandleFunc("/users/register", authHandler.Register)
-	mux.HandleFunc("/users/login", authHandler.Login)
-	mux.HandleFunc("/public", userHandler.GetPublicProfile)
-	mux.Handle("/me", middleware.Auth(config.JwtSecret)(http.HandlerFunc(userHandler.GetPrivateProfile)))
-	mux.Handle("/profile/update", middleware.Auth(config.JwtSecret)(http.HandlerFunc(userHandler.Update)))
-	mux.Handle("/profile/delete", middleware.Auth(config.JwtSecret)(http.HandlerFunc(userHandler.Delete)))
+	authService := auth.NewService(*userService)
+	authHandler := auth.NewHandler(authService, config.JwtSecret)
+
+	r := chi.NewRouter()
+	user.RegisterRoutes(r, userHandler)
+	auth.RegisterRoutes(r, authHandler)
 
 	fmt.Println("Listening on port 8080")
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	log.Fatal(http.ListenAndServe(":8080", r))
 }

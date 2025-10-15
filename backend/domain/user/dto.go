@@ -1,9 +1,5 @@
 package user
 
-type GetProfileRequest struct {
-	ID int `json:"id"`
-}
-
 type GetPublicProfileResponse struct {
 	ID        int    `json:"id"`
 	Username  string `json:"username"`
@@ -18,11 +14,6 @@ type GetPrivateProfileResponse struct {
 }
 
 type UpdateRequest struct {
-	ID       int    `json:"id"`
 	Username string `json:"username"`
 	Password string `json:"password"`
-}
-
-type DeleteRequest struct {
-	ID int `json:"id"`
 }
