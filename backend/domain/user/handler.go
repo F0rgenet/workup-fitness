@@ -64,7 +64,10 @@ func (h *Handler) GetPrivateProfile(w http.ResponseWriter, r *http.Request) {
 	resp.CreatedAt = user.CreatedAt.Format(time.RFC3339)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		httpx.InternalServerError(w, err)
+		return
+	}
 }
 
 func (h *Handler) GetPublicProfile(w http.ResponseWriter, r *http.Request) {
@@ -94,7 +97,10 @@ func (h *Handler) GetPublicProfile(w http.ResponseWriter, r *http.Request) {
 	resp.CreatedAt = user.CreatedAt.Format(time.RFC3339)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		httpx.InternalServerError(w, err)
+		return
+	}
 }
 
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
@@ -140,7 +146,10 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(user)
+	if err := json.NewEncoder(w).Encode(user); err != nil {
+		httpx.InternalServerError(w, err)
+		return
+	}
 }
 
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {

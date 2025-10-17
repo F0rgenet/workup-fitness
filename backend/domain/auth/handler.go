@@ -71,7 +71,10 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		httpx.InternalServerError(w, err)
+		return
+	}
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
@@ -100,5 +103,8 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		httpx.InternalServerError(w, err)
+		return
+	}
 }

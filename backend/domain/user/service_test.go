@@ -56,7 +56,8 @@ func TestService_GetByID(t *testing.T) {
 		Username:     "bob",
 		PasswordHash: "hash",
 	}
-	repo.Create(ctx, newUser)
+	_, err := repo.Create(ctx, newUser)
+	require.NoError(t, err)
 
 	found, err := svc.GetByID(ctx, 1)
 	require.NoError(t, err)
@@ -83,7 +84,8 @@ func TestService_GetByUsername(t *testing.T) {
 		Username:     "bob",
 		PasswordHash: "hash",
 	}
-	repo.Create(ctx, newUser)
+	_, err := repo.Create(ctx, newUser)
+	require.NoError(t, err)
 
 	found, err := svc.GetByUsername(ctx, newUser.Username)
 	require.NoError(t, err)
