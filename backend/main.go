@@ -31,7 +31,7 @@ func main() {
 	userService := user.NewService(userRepo)
 	userHandler := user.NewHandler(userService)
 
-	authService := auth.NewService(*userService)
+	authService := auth.NewService(userService)
 	authHandler := auth.NewHandler(authService, config.JwtSecret)
 
 	r := chi.NewRouter()
@@ -39,5 +39,5 @@ func main() {
 	auth.RegisterRoutes(r, authHandler)
 
 	fmt.Println("Listening on port 8080")
-	log.Fatal(http.ListenAndServe(":8080", r))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", config.Port), r))
 }

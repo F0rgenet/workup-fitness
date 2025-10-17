@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -11,12 +12,17 @@ import (
 	"workup_fitness/pkg/httpx"
 )
 
+type ServiceInterface interface {
+	Register(ctx context.Context, username, password string) (*user.User, error)
+	Login(ctx context.Context, username, password string) (*user.User, error)
+}
+
 type Handler struct {
-	service *Service
+	service ServiceInterface
 	secret  string
 }
 
-func NewHandler(service *Service, secret string) *Handler {
+func NewHandler(service ServiceInterface, secret string) *Handler {
 	return &Handler{service: service, secret: secret}
 }
 

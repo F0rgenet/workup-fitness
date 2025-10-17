@@ -9,11 +9,16 @@ import (
 	"workup_fitness/domain/user"
 )
 
-type Service struct {
-	service user.Service
+type UserService interface {
+	Create(ctx context.Context, username, passwordHash string) (*user.User, error)
+	GetByUsername(ctx context.Context, username string) (*user.User, error)
 }
 
-func NewService(service user.Service) *Service {
+type Service struct {
+	service UserService
+}
+
+func NewService(service UserService) *Service {
 	return &Service{service: service}
 }
 

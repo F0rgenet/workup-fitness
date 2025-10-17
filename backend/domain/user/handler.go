@@ -15,11 +15,17 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type Handler struct {
-	service *Service
+type ServiceInterface interface {
+	GetByID(ctx context.Context, id int) (*User, error)
+	Update(ctx context.Context, user *User) error
+	Delete(ctx context.Context, id int) error
 }
 
-func NewHandler(service *Service) *Handler {
+type Handler struct {
+	service ServiceInterface
+}
+
+func NewHandler(service ServiceInterface) *Handler {
 	return &Handler{service: service}
 }
 

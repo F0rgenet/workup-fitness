@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 )
 
@@ -34,11 +35,25 @@ func (s *Service) Create(ctx context.Context, username, passwordHash string) (*U
 }
 
 func (s *Service) GetByID(ctx context.Context, id int) (*User, error) {
-	return s.repo.GetByID(ctx, id)
+	found, err := s.repo.GetByID(ctx, id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrUserNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return found, nil
 }
 
 func (s *Service) GetByUsername(ctx context.Context, username string) (*User, error) {
-	return s.repo.GetByUsername(ctx, username)
+	found, err := s.repo.GetByUsername(ctx, username)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrUserNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return found, nil
 }
 
 func (s *Service) Update(ctx context.Context, user *User) error {
@@ -46,16 +61,17 @@ func (s *Service) Update(ctx context.Context, user *User) error {
 	if err != nil {
 		return ErrUserNotFound
 	}
+	found, _ := s.GetByUsername(ctx, user.Username)
+	if found != nil {
+		return ErrAlreadyExists
+	}
 	return s.repo.Update(ctx, user)
 }
 
 func (s *Service) Delete(ctx context.Context, id int) error {
-	user, err := s.repo.GetByID(ctx, id)
+	_, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return ErrUserNotFound
-	}
-	if user.ID != id {
-		return ErrInvalidPermissions
 	}
 	return s.repo.Delete(ctx, id)
 }
