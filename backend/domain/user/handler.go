@@ -118,6 +118,10 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req UpdateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.BadRequest(w, "Invalid request body")
+		return
+	}
 
 	user := &User{
 		ID:           userID,
@@ -139,8 +143,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		user.Username = req.Username
 	}
 
-	err = h.service.Update(ctx, user)
-	if err != nil {
+	if err := h.service.Update(ctx, user); err != nil {
 		httpx.InternalServerError(w, err)
 		return
 	}

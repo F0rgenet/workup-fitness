@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -186,7 +187,7 @@ func TestUpdate_ServiceError(t *testing.T) {
 
 	handler := user.NewHandler(mockService)
 
-	req := httptest.NewRequest(http.MethodPut, "/profile/update", nil)
+	req := httptest.NewRequest(http.MethodPut, "/profile/update", strings.NewReader(`{}`))
 	ctx := context.WithValue(req.Context(), middleware.UserIDKey, 1)
 	req = req.WithContext(ctx)
 
