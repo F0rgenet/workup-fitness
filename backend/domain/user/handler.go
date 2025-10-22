@@ -12,6 +12,7 @@ import (
 	"workup_fitness/pkg/httpx"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -26,6 +27,8 @@ type Handler struct {
 }
 
 func NewHandler(service ServiceInterface) *Handler {
+	log.Info().Msg("Creating user handler...")
+	defer log.Info().Msg("Created user handler")
 	return &Handler{service: service}
 }
 
@@ -52,6 +55,8 @@ func (h *Handler) GetPrivateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Info().Msgf("Getting private profile for user with id %d", userID)
+
 	user, err := h.service.GetByID(ctx, userID)
 	if err != nil {
 		httpx.InternalServerError(w, err)
@@ -68,6 +73,8 @@ func (h *Handler) GetPrivateProfile(w http.ResponseWriter, r *http.Request) {
 		httpx.InternalServerError(w, err)
 		return
 	}
+
+	log.Info().Msgf("Got private profile for user with id %d", userID)
 }
 
 func (h *Handler) GetPublicProfile(w http.ResponseWriter, r *http.Request) {
@@ -83,6 +90,8 @@ func (h *Handler) GetPublicProfile(w http.ResponseWriter, r *http.Request) {
 		httpx.BadRequest(w, "Invalid profile id")
 		return
 	}
+
+	log.Info().Msgf("Getting public profile for user with id %d", userID)
 
 	user, err := h.service.GetByID(ctx, userID)
 
@@ -101,6 +110,8 @@ func (h *Handler) GetPublicProfile(w http.ResponseWriter, r *http.Request) {
 		httpx.InternalServerError(w, err)
 		return
 	}
+
+	log.Info().Msgf("Got public profile for user with id %d", userID)
 }
 
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
@@ -116,6 +127,8 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		httpx.Unauthorized(w, "Unauthorized")
 		return
 	}
+
+	log.Info().Msgf("Updating user with id %d", userID)
 
 	var req UpdateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -160,6 +173,8 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		httpx.InternalServerError(w, err)
 		return
 	}
+
+	log.Info().Msgf("Updated user with id %d", userID)
 }
 
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
@@ -176,6 +191,8 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Info().Msgf("Deleting user with id %d", userID)
+
 	err = h.service.Delete(ctx, userID)
 	if err != nil {
 		httpx.InternalServerError(w, err)
@@ -183,4 +200,6 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusAccepted)
+
+	log.Info().Msgf("Deleted user with id %d", userID)
 }

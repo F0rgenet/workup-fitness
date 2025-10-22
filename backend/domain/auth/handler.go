@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/rs/zerolog/log"
 
 	"workup_fitness/domain/user"
 	"workup_fitness/pkg/httpx"
@@ -23,6 +24,8 @@ type Handler struct {
 }
 
 func NewHandler(service ServiceInterface, secret string) *Handler {
+	log.Info().Msg("Creating auth handler...")
+	defer log.Info().Msg("Created auth handler")
 	return &Handler{service: service, secret: secret}
 }
 
@@ -64,6 +67,8 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Info().Msgf("Registered user with username %s", req.Username)
+
 	resp, err := prepareAuthReponse(user, h.secret)
 	if err != nil {
 		httpx.InternalServerError(w, err)
@@ -75,6 +80,8 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		httpx.InternalServerError(w, err)
 		return
 	}
+
+	log.Info().Msgf("Registered user with username %s", req.Username)
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
@@ -96,6 +103,8 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Info().Msgf("Logged in user with username %s", req.Username)
+
 	resp, err := prepareAuthReponse(user, h.secret)
 	if err != nil {
 		httpx.InternalServerError(w, err)
@@ -107,4 +116,6 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		httpx.InternalServerError(w, err)
 		return
 	}
+
+	log.Info().Msgf("Logged in user with username %s", req.Username)
 }

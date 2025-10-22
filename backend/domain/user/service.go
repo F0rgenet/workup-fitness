@@ -23,6 +23,7 @@ type serviceImpl struct {
 
 func NewService(repo Repository) *serviceImpl {
 	log.Info().Msg("Creating user service...")
+	defer log.Info().Msg("Created user service")
 	return &serviceImpl{repo: repo}
 }
 

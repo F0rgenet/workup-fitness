@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
 
 	"workup_fitness/domain/user"
@@ -26,10 +27,14 @@ type serviceImpl struct {
 }
 
 func NewService(service UserService) *serviceImpl {
+	log.Info().Msg("Creating auth service...")
+	defer log.Info().Msg("Created auth service")
 	return &serviceImpl{userService: service}
 }
 
 func (s *serviceImpl) Register(ctx context.Context, username, password string) (*user.User, error) {
+	log.Info().Msgf("Register user with username %s", username)
+
 	if username == "" {
 		return nil, errors.Join(ErrMissingField, errors.New("username is required"))
 	}
@@ -47,10 +52,14 @@ func (s *serviceImpl) Register(ctx context.Context, username, password string) (
 		return nil, err
 	}
 
+	log.Info().Msgf("Registered user with username %s", username)
+
 	return user, nil
 }
 
 func (s *serviceImpl) Login(ctx context.Context, username, password string) (*user.User, error) {
+	log.Info().Msgf("Logging in user with username %s", username)
+
 	user, err := s.userService.GetByUsername(ctx, username)
 	if err != nil {
 		return nil, ErrInvalidCreds
@@ -60,6 +69,8 @@ func (s *serviceImpl) Login(ctx context.Context, username, password string) (*us
 	if err != nil {
 		return nil, ErrInvalidCreds
 	}
+
+	log.Info().Msgf("Logged in user with username %s", username)
 
 	return user, nil
 }
