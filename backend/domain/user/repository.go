@@ -3,7 +3,12 @@ package user
 import (
 	"context"
 	"database/sql"
+	"errors"
+
+	"github.com/mattn/go-sqlite3"
 )
+
+//go:generate mockgen -destination=mocks/mock_repository.go -package=mocks workup_fitness/domain/user Repository
 
 type Repository interface {
 	Create(ctx context.Context, user *User) (int, error)
@@ -23,10 +28,16 @@ func NewSQLiteRepository(db *sql.DB) Repository {
 
 func (repo *sqliteRepository) Create(ctx context.Context, user *User) (int, error) {
 	res, err := repo.db.ExecContext(ctx,
-		`INSERT INTO users (username, password_hash, created_at) VALUES (?, ?, ?)`,
-		user.Username, user.PasswordHash, user.CreatedAt,
+		`INSERT INTO users (username, password_hash) VALUES (?, ?)`,
+		user.Username, user.PasswordHash,
 	)
 	if err != nil {
+		var sqliteErr sqlite3.Error
+		if errors.As(err, &sqliteErr) {
+			if sqliteErr.Code == sqlite3.ErrConstraint {
+				return 0, ErrAlreadyExists
+			}
+		}
 		return 0, err
 	}
 
@@ -37,19 +48,6 @@ func (repo *sqliteRepository) Create(ctx context.Context, user *User) (int, erro
 	return int(id), nil
 }
 
-func (repo *sqliteRepository) GetByUsername(ctx context.Context, username string) (*User, error) {
-	var user User
-	row := repo.db.QueryRowContext(ctx,
-		`SELECT id, username, password_hash, created_at FROM users WHERE username = ?`,
-		username,
-	)
-	err := row.Scan(&user.ID, &user.Username, &user.PasswordHash, &user.CreatedAt)
-	if err != nil {
-		return nil, err
-	}
-	return &user, nil
-}
-
 func (repo *sqliteRepository) GetByID(ctx context.Context, id int) (*User, error) {
 	var user User
 	row := repo.db.QueryRowContext(ctx,
@@ -58,23 +56,70 @@ func (repo *sqliteRepository) GetByID(ctx context.Context, id int) (*User, error
 	)
 	err := row.Scan(&user.ID, &user.Username, &user.PasswordHash, &user.CreatedAt)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrUserNotFound
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (repo *sqliteRepository) GetByUsername(ctx context.Context, username string) (*User, error) {
+	var user User
+	row := repo.db.QueryRowContext(ctx,
+		`SELECT id, username, password_hash, created_at FROM users WHERE username = ?`,
+		username,
+	)
+	err := row.Scan(&user.ID, &user.Username, &user.PasswordHash, &user.CreatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrUserNotFound
+		}
 		return nil, err
 	}
 	return &user, nil
 }
 
 func (repo *sqliteRepository) Update(ctx context.Context, user *User) error {
-	_, err := repo.db.ExecContext(ctx,
+	result, err := repo.db.ExecContext(ctx,
 		`UPDATE users SET username = ?, password_hash = ? WHERE id = ?`,
 		user.Username, user.PasswordHash, user.ID,
 	)
-	return err
+	if err != nil {
+		var sqliteErr sqlite3.Error
+		if errors.As(err, &sqliteErr) {
+			if sqliteErr.Code == sqlite3.ErrConstraint {
+				return ErrAlreadyExists
+			}
+		}
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return ErrUserNotFound
+	}
+
+	return nil
 }
 
 func (repo *sqliteRepository) Delete(ctx context.Context, id int) error {
-	_, err := repo.db.ExecContext(ctx,
+	result, err := repo.db.ExecContext(ctx,
 		`DELETE FROM users WHERE id = ?`,
 		id,
 	)
-	return err
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return ErrUserNotFound
+	}
+
+	return nil
 }

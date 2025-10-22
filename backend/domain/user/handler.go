@@ -129,6 +129,8 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		PasswordHash: "",
 	}
 
+	// TODO: Вынести в ChangePassword в auth, заменить на UpdateUsername
+
 	if req.Password != "" {
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 		if err != nil {
@@ -144,6 +146,11 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.service.Update(ctx, user); err != nil {
+		if errors.Is(err, ErrMissingField) {
+			httpx.BadRequest(w, "Nothing to update, provide at least one field")
+			return
+		}
+
 		httpx.InternalServerError(w, err)
 		return
 	}

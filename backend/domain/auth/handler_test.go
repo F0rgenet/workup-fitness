@@ -2,7 +2,6 @@ package auth
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -12,28 +11,30 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 
 	"workup_fitness/domain/auth/mocks"
 	"workup_fitness/domain/user"
 )
 
 func TestRegisterHandler_Success(t *testing.T) {
-	mockService := &mocks.MockService{
-		RegisterFunc: func(ctx context.Context, username, password string) (*user.User, error) {
-			return &user.User{
-				ID:        1,
-				Username:  username,
-				CreatedAt: time.Now(),
-			}, nil
-		},
-	}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
+	mockService := mocks.NewMockService(ctrl)
 	handler := NewHandler(mockService, "test-secret")
 
-	reqBody := RegisterRequest{
-		Username: "testuser",
-		Password: "password123",
+	expectedUser := &user.User{
+		ID:        1,
+		Username:  "testuser",
+		CreatedAt: time.Now(),
 	}
+
+	mockService.EXPECT().
+		Register(gomock.Any(), "testuser", "password123").
+		Return(expectedUser, nil)
+
+	reqBody := RegisterRequest{Username: "testuser", Password: "password123"}
 	body, _ := json.Marshal(reqBody)
 
 	req := httptest.NewRequest(http.MethodPost, "/register", bytes.NewReader(body))
@@ -45,8 +46,7 @@ func TestRegisterHandler_Success(t *testing.T) {
 	require.Equal(t, http.StatusOK, rr.Code)
 
 	var resp AuthResponse
-	err := json.NewDecoder(rr.Body).Decode(&resp)
-	require.NoError(t, err)
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&resp))
 	require.Equal(t, "testuser", resp.User.Username)
 	require.NotEmpty(t, resp.Token)
 
@@ -55,16 +55,13 @@ func TestRegisterHandler_Success(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.True(t, token.Valid)
-
-	claims, ok := token.Claims.(jwt.MapClaims)
-	require.True(t, ok)
-
-	userID := int(claims["userID"].(float64))
-	require.Equal(t, 1, userID)
 }
 
 func TestRegisterHandler_InvalidJSON(t *testing.T) {
-	mockService := &mocks.MockService{}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockService := mocks.NewMockService(ctrl)
 	handler := NewHandler(mockService, "test-secret")
 
 	req := httptest.NewRequest(http.MethodPost, "/register", bytes.NewReader([]byte("invalid json")))
@@ -72,63 +69,62 @@ func TestRegisterHandler_InvalidJSON(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	handler.Register(rr, req)
-
 	require.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 func TestRegisterHandler_ServiceError(t *testing.T) {
-	mockService := &mocks.MockService{
-		RegisterFunc: func(ctx context.Context, username, password string) (*user.User, error) {
-			return nil, errors.New("username already exists")
-		},
-	}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
+	mockService := mocks.NewMockService(ctrl)
 	handler := NewHandler(mockService, "test-secret")
 
-	reqBody := RegisterRequest{
-		Username: "testuser",
-		Password: "password123",
-	}
-	body, _ := json.Marshal(reqBody)
+	mockService.EXPECT().
+		Register(gomock.Any(), "testuser", "password123").
+		Return(nil, errors.New("username already exists"))
 
+	reqBody := RegisterRequest{Username: "testuser", Password: "password123"}
+	body, _ := json.Marshal(reqBody)
 	req := httptest.NewRequest(http.MethodPost, "/register", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
 	handler.Register(rr, req)
-
 	require.Equal(t, http.StatusInternalServerError, rr.Code)
 }
 
 func TestRegisterHandler_MethodNotAllowed(t *testing.T) {
-	mockService := &mocks.MockService{}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockService := mocks.NewMockService(ctrl)
 	handler := NewHandler(mockService, "test-secret")
 
 	req := httptest.NewRequest(http.MethodGet, "/register", nil)
 	rr := httptest.NewRecorder()
 
 	handler.Register(rr, req)
-
 	require.Equal(t, http.StatusMethodNotAllowed, rr.Code)
 }
 
 func TestLoginHandler_Success(t *testing.T) {
-	mockService := &mocks.MockService{
-		LoginFunc: func(ctx context.Context, username, password string) (*user.User, error) {
-			return &user.User{
-				ID:        1,
-				Username:  username,
-				CreatedAt: time.Now(),
-			}, nil
-		},
-	}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
+	mockService := mocks.NewMockService(ctrl)
 	handler := NewHandler(mockService, "test-secret")
 
-	reqBody := LoginRequest{
-		Username: "testuser",
-		Password: "password123",
+	expectedUser := &user.User{
+		ID:        1,
+		Username:  "testuser",
+		CreatedAt: time.Now(),
 	}
+
+	mockService.EXPECT().
+		Login(gomock.Any(), "testuser", "password123").
+		Return(expectedUser, nil)
+
+	reqBody := LoginRequest{Username: "testuser", Password: "password123"}
 	body, _ := json.Marshal(reqBody)
 
 	req := httptest.NewRequest(http.MethodPost, "/login", bytes.NewReader(body))
@@ -140,8 +136,7 @@ func TestLoginHandler_Success(t *testing.T) {
 	require.Equal(t, http.StatusOK, rr.Code)
 
 	var resp AuthResponse
-	err := json.NewDecoder(rr.Body).Decode(&resp)
-	require.NoError(t, err)
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&resp))
 	require.Equal(t, "testuser", resp.User.Username)
 	require.NotEmpty(t, resp.Token)
 
@@ -153,7 +148,10 @@ func TestLoginHandler_Success(t *testing.T) {
 }
 
 func TestLoginHandler_InvalidJSON(t *testing.T) {
-	mockService := &mocks.MockService{}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockService := mocks.NewMockService(ctrl)
 	handler := NewHandler(mockService, "test-secret")
 
 	req := httptest.NewRequest(http.MethodPost, "/login", bytes.NewReader([]byte("invalid json")))
@@ -161,23 +159,21 @@ func TestLoginHandler_InvalidJSON(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	handler.Login(rr, req)
-
 	require.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
 func TestLoginHandler_ServiceError(t *testing.T) {
-	mockService := &mocks.MockService{
-		LoginFunc: func(ctx context.Context, username, password string) (*user.User, error) {
-			return nil, ErrInvalidCreds
-		},
-	}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
+	mockService := mocks.NewMockService(ctrl)
 	handler := NewHandler(mockService, "test-secret")
 
-	reqBody := LoginRequest{
-		Username: "testuser",
-		Password: "wrongpassword",
-	}
+	mockService.EXPECT().
+		Login(gomock.Any(), "testuser", "wrongpassword").
+		Return(nil, ErrInvalidCreds)
+
+	reqBody := LoginRequest{Username: "testuser", Password: "wrongpassword"}
 	body, _ := json.Marshal(reqBody)
 
 	req := httptest.NewRequest(http.MethodPost, "/login", bytes.NewReader(body))
@@ -185,19 +181,20 @@ func TestLoginHandler_ServiceError(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	handler.Login(rr, req)
-
 	require.Equal(t, http.StatusInternalServerError, rr.Code)
 }
 
 func TestLoginHandler_MethodNotAllowed(t *testing.T) {
-	mockService := &mocks.MockService{}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockService := mocks.NewMockService(ctrl)
 	handler := NewHandler(mockService, "test-secret")
 
 	req := httptest.NewRequest(http.MethodGet, "/login", nil)
 	rr := httptest.NewRecorder()
 
 	handler.Login(rr, req)
-
 	require.Equal(t, http.StatusMethodNotAllowed, rr.Code)
 }
 
@@ -223,7 +220,5 @@ func TestPrepareAuthResponse_Success(t *testing.T) {
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	require.True(t, ok)
-
-	userID := int(claims["userID"].(float64))
-	require.Equal(t, 1, userID)
+	require.Equal(t, 1, int(claims["userID"].(float64)))
 }

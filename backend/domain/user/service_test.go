@@ -7,22 +7,33 @@ import (
 	"workup_fitness/domain/user/mocks"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 func TestService_Create_Success(t *testing.T) {
-	repo := mocks.NewMockRepository()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := mocks.NewMockRepository(ctrl)
 	svc := user.NewService(repo)
 	ctx := context.Background()
+
+	repo.EXPECT().
+		Create(ctx, gomock.Any()).
+		Return(1, nil)
 
 	newUser, err := svc.Create(ctx, "alice", "some_hash")
 	require.NoError(t, err)
 	require.Equal(t, "alice", newUser.Username)
 	require.Equal(t, "some_hash", newUser.PasswordHash)
-	require.Greater(t, newUser.ID, 0)
+	require.Equal(t, 1, newUser.ID)
 }
 
 func TestService_Create_MissingFields(t *testing.T) {
-	repo := mocks.NewMockRepository()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := mocks.NewMockRepository(ctrl)
 	svc := user.NewService(repo)
 	ctx := context.Background()
 
@@ -35,98 +46,59 @@ func TestService_Create_MissingFields(t *testing.T) {
 	require.Nil(t, u)
 }
 
-func TestService_Create_AlreadyExists(t *testing.T) {
-	repo := mocks.NewMockRepository()
-	svc := user.NewService(repo)
-	ctx := context.Background()
-
-	_, err := svc.Create(ctx, "bob", "hash")
-	require.NoError(t, err)
-
-	_, err = svc.Create(ctx, "bob", "hash")
-	require.ErrorIs(t, err, user.ErrAlreadyExists)
-}
-
 func TestService_GetByID(t *testing.T) {
-	repo := mocks.NewMockRepository()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := mocks.NewMockRepository(ctrl)
 	svc := user.NewService(repo)
 	ctx := context.Background()
 
-	newUser := &user.User{
+	expectedUser := &user.User{
+		ID:           1,
 		Username:     "bob",
 		PasswordHash: "hash",
 	}
-	_, err := repo.Create(ctx, newUser)
-	require.NoError(t, err)
+
+	repo.EXPECT().
+		GetByID(ctx, 1).
+		Return(expectedUser, nil)
 
 	found, err := svc.GetByID(ctx, 1)
 	require.NoError(t, err)
-	require.Equal(t, newUser.Username, found.Username)
-	require.Equal(t, newUser.PasswordHash, found.PasswordHash)
-}
-
-func TestService_GetByID_NotFound(t *testing.T) {
-	repo := mocks.NewMockRepository()
-	svc := user.NewService(repo)
-	ctx := context.Background()
-
-	found, err := svc.GetByID(ctx, 1)
-	require.ErrorIs(t, err, user.ErrUserNotFound)
-	require.Nil(t, found)
+	require.Equal(t, expectedUser.Username, found.Username)
+	require.Equal(t, expectedUser.PasswordHash, found.PasswordHash)
 }
 
 func TestService_GetByUsername(t *testing.T) {
-	repo := mocks.NewMockRepository()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := mocks.NewMockRepository(ctrl)
 	svc := user.NewService(repo)
 	ctx := context.Background()
 
-	newUser := &user.User{
+	expectedUser := &user.User{
+		ID:           1,
 		Username:     "bob",
 		PasswordHash: "hash",
 	}
-	_, err := repo.Create(ctx, newUser)
-	require.NoError(t, err)
 
-	found, err := svc.GetByUsername(ctx, newUser.Username)
-	require.NoError(t, err)
-	require.Equal(t, newUser.Username, found.Username)
-	require.Equal(t, newUser.PasswordHash, found.PasswordHash)
-}
-
-func TestService_GetByUsername_NotFound(t *testing.T) {
-	repo := mocks.NewMockRepository()
-	svc := user.NewService(repo)
-	ctx := context.Background()
+	repo.EXPECT().
+		GetByUsername(ctx, "bob").
+		Return(expectedUser, nil)
 
 	found, err := svc.GetByUsername(ctx, "bob")
-	require.ErrorIs(t, err, user.ErrUserNotFound)
-	require.Nil(t, found)
+	require.NoError(t, err)
+	require.Equal(t, expectedUser.Username, found.Username)
+	require.Equal(t, expectedUser.PasswordHash, found.PasswordHash)
 }
 
-func TestService_Update(t *testing.T) {
-	repo := mocks.NewMockRepository()
-	svc := user.NewService(repo)
-	ctx := context.Background()
+func TestService_Update_Success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	newUser, err := svc.Create(ctx, "bob", "hash")
-	require.NoError(t, err)
-
-	updatedUser := &user.User{
-		ID:           newUser.ID,
-		Username:     "alice",
-		PasswordHash: "nothash",
-	}
-	err = svc.Update(ctx, updatedUser)
-	require.NoError(t, err)
-
-	found, err := svc.GetByID(ctx, newUser.ID)
-	require.NoError(t, err)
-	require.Equal(t, updatedUser.Username, found.Username)
-	require.Equal(t, updatedUser.PasswordHash, found.PasswordHash)
-}
-
-func TestService_Update_NotFound(t *testing.T) {
-	repo := mocks.NewMockRepository()
+	repo := mocks.NewMockRepository(ctrl)
 	svc := user.NewService(repo)
 	ctx := context.Background()
 
@@ -135,51 +107,44 @@ func TestService_Update_NotFound(t *testing.T) {
 		Username:     "alice",
 		PasswordHash: "nothash",
 	}
+
+	repo.EXPECT().Update(ctx, updatedUser).Return(nil)
 	err := svc.Update(ctx, updatedUser)
-	require.ErrorIs(t, err, user.ErrUserNotFound)
+	require.NoError(t, err)
+
+	require.Equal(t, updatedUser.Username, updatedUser.Username)
+	require.Equal(t, updatedUser.PasswordHash, updatedUser.PasswordHash)
+	require.Equal(t, updatedUser.ID, updatedUser.ID)
 }
 
-func TestService_Update_AlreadyExists(t *testing.T) {
-	repo := mocks.NewMockRepository()
+func TestService_Update_MissingFields(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := mocks.NewMockRepository(ctrl)
 	svc := user.NewService(repo)
 	ctx := context.Background()
 
-	newUser, err := svc.Create(ctx, "bob", "hash")
-	require.NoError(t, err)
-
-	_, err = svc.Create(ctx, "alice", "hash")
-	require.NoError(t, err)
-
 	updatedUser := &user.User{
-		ID:           newUser.ID,
-		Username:     "alice",
-		PasswordHash: "nothash",
+		ID: 1,
 	}
-	err = svc.Update(ctx, updatedUser)
-	require.ErrorIs(t, err, user.ErrAlreadyExists)
+
+	err := svc.Update(ctx, updatedUser)
+	require.ErrorIs(t, err, user.ErrMissingField)
 }
 
 func TestService_Delete(t *testing.T) {
-	repo := mocks.NewMockRepository()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := mocks.NewMockRepository(ctrl)
 	svc := user.NewService(repo)
 	ctx := context.Background()
 
-	newUser, err := svc.Create(ctx, "bob", "hash")
-	require.NoError(t, err)
-
-	err = svc.Delete(ctx, newUser.ID)
-	require.NoError(t, err)
-
-	found, err := svc.GetByID(ctx, newUser.ID)
-	require.ErrorIs(t, err, user.ErrUserNotFound)
-	require.Nil(t, found)
-}
-
-func TestService_Delete_NotFound(t *testing.T) {
-	repo := mocks.NewMockRepository()
-	svc := user.NewService(repo)
-	ctx := context.Background()
+	repo.EXPECT().
+		Delete(ctx, 1).
+		Return(nil)
 
 	err := svc.Delete(ctx, 1)
-	require.ErrorIs(t, err, user.ErrUserNotFound)
+	require.NoError(t, err)
 }

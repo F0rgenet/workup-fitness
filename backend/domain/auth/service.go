@@ -9,20 +9,27 @@ import (
 	"workup_fitness/domain/user"
 )
 
+//go:generate mockgen -destination=mocks/mock_service.go -package=mocks workup_fitness/domain/auth Service
+
 type UserService interface {
 	Create(ctx context.Context, username, passwordHash string) (*user.User, error)
 	GetByUsername(ctx context.Context, username string) (*user.User, error)
 }
 
-type Service struct {
-	service UserService
+type Service interface {
+	Register(ctx context.Context, username, password string) (*user.User, error)
+	Login(ctx context.Context, username, password string) (*user.User, error)
 }
 
-func NewService(service UserService) *Service {
-	return &Service{service: service}
+type serviceImpl struct {
+	userService UserService
 }
 
-func (s *Service) Register(ctx context.Context, username, password string) (*user.User, error) {
+func NewService(service UserService) *serviceImpl {
+	return &serviceImpl{userService: service}
+}
+
+func (s *serviceImpl) Register(ctx context.Context, username, password string) (*user.User, error) {
 	if username == "" {
 		return nil, errors.Join(ErrMissingField, errors.New("username is required"))
 	}
@@ -35,7 +42,7 @@ func (s *Service) Register(ctx context.Context, username, password string) (*use
 		return nil, err
 	}
 
-	user, err := s.service.Create(ctx, username, string(hashedPassword))
+	user, err := s.userService.Create(ctx, username, string(hashedPassword))
 	if err != nil {
 		return nil, err
 	}
@@ -43,8 +50,8 @@ func (s *Service) Register(ctx context.Context, username, password string) (*use
 	return user, nil
 }
 
-func (s *Service) Login(ctx context.Context, username, password string) (*user.User, error) {
-	user, err := s.service.GetByUsername(ctx, username)
+func (s *serviceImpl) Login(ctx context.Context, username, password string) (*user.User, error) {
+	user, err := s.userService.GetByUsername(ctx, username)
 	if err != nil {
 		return nil, ErrInvalidCreds
 	}
