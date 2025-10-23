@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/guregu/null/v6/zero"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
@@ -29,7 +30,7 @@ func TestGetPrivateProfile_Success(t *testing.T) {
 
 	mockUser := &user.User{
 		ID:        1,
-		Username:  "testuser",
+		Username:  zero.StringFrom("testuser"),
 		CreatedAt: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 	}
 
@@ -96,7 +97,7 @@ func TestGetPublicProfile_Success(t *testing.T) {
 
 	mockUser := &user.User{
 		ID:        1,
-		Username:  "publicuser",
+		Username:  zero.StringFrom("publicuser"),
 		CreatedAt: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 	}
 
@@ -167,8 +168,8 @@ func TestUpdate_Success(t *testing.T) {
 	handler := user.NewHandler(mockService)
 
 	reqBody := user.UpdateRequest{
-		Username: "newusername",
-		Password: "newpassword",
+		Username: zero.StringFrom("newusername"),
+		Password: zero.StringFrom("newpassword"),
 	}
 	body, _ := json.Marshal(reqBody)
 

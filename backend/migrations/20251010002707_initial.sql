@@ -9,18 +9,18 @@ CREATE TABLE users (
 CREATE TABLE simulators (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
-    description TEXT NOT NULL,
-    min_weight REAL NOT NULL,
-    max_weight REAL NOT NULL,
-    weight_increment REAL NOT NULL,
+    description TEXT,
+    min_weight REAL,
+    max_weight REAL,
+    weight_increment REAL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE exercises (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
-    description TEXT NOT NULL,
-    simulator INTEGER NOT NULL,
+    description TEXT,
+    simulator INTEGER,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (simulator) REFERENCES simulators(id)
 );

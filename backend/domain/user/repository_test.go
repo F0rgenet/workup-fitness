@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/guregu/null/v6/zero"
 	"github.com/stretchr/testify/require"
 
 	"workup_fitness/domain/user"
@@ -26,13 +27,13 @@ func TestRepository_Create_Success(t *testing.T) {
 	defer db.Close()
 
 	user := &user.User{
-		Username:     "alice",
-		PasswordHash: "some_hash235",
+		Username:     zero.StringFrom("alice"),
+		PasswordHash: zero.StringFrom("some_hash235"),
 	}
 
 	id, err := repo.Create(ctx, user)
 	require.NoError(t, err)
-	require.Greater(t, id, 0)
+	require.Equal(t, id, 1)
 }
 
 func TestRepository_Create_AlreadyExists(t *testing.T) {
@@ -40,8 +41,8 @@ func TestRepository_Create_AlreadyExists(t *testing.T) {
 	defer db.Close()
 
 	newUser := &user.User{
-		Username:     "bob",
-		PasswordHash: "hash456",
+		Username:     zero.StringFrom("bob"),
+		PasswordHash: zero.StringFrom("hash456"),
 	}
 
 	_, err := repo.Create(ctx, newUser)
@@ -51,13 +52,22 @@ func TestRepository_Create_AlreadyExists(t *testing.T) {
 	require.ErrorIs(t, err, user.ErrAlreadyExists)
 }
 
+func TestRepository_Create_MissingFields(t *testing.T) {
+	repo, db, ctx := newTestRepository(t)
+	defer db.Close()
+
+	_, err := repo.Create(ctx, &user.User{})
+	require.ErrorIs(t, err, user.ErrMissingField)
+	require.ErrorContains(t, err, "username")
+}
+
 func TestRepository_GetByID_Success(t *testing.T) {
 	repo, db, ctx := newTestRepository(t)
 	defer db.Close()
 
 	newUser := &user.User{
-		Username:     "bob",
-		PasswordHash: "hash456",
+		Username:     zero.StringFrom("bob"),
+		PasswordHash: zero.StringFrom("hash456"),
 		CreatedAt:    time.Now(),
 	}
 
@@ -84,15 +94,15 @@ func TestRepository_GetByUsername_Success(t *testing.T) {
 	defer db.Close()
 
 	newUser := &user.User{
-		Username:     "bobs",
-		PasswordHash: "hash456",
+		Username:     zero.StringFrom("bob"),
+		PasswordHash: zero.StringFrom("hash456"),
 		CreatedAt:    time.Now(),
 	}
 
 	_, err := repo.Create(ctx, newUser)
 	require.NoError(t, err)
 
-	found, err := repo.GetByUsername(ctx, newUser.Username)
+	found, err := repo.GetByUsername(ctx, newUser.Username.String)
 	require.NoError(t, err)
 	require.Equal(t, newUser.Username, found.Username)
 	require.Equal(t, newUser.PasswordHash, found.PasswordHash)
@@ -112,8 +122,8 @@ func TestRepository_Update_Success(t *testing.T) {
 	defer db.Close()
 
 	newUser := &user.User{
-		Username:     "bob",
-		PasswordHash: "hash456",
+		Username:     zero.StringFrom("bob"),
+		PasswordHash: zero.StringFrom("hash456"),
 		CreatedAt:    time.Now(),
 	}
 
@@ -122,8 +132,8 @@ func TestRepository_Update_Success(t *testing.T) {
 
 	updatedUser := &user.User{
 		ID:           id,
-		Username:     "alice",
-		PasswordHash: "nothash456",
+		Username:     zero.StringFrom("alice"),
+		PasswordHash: zero.StringFrom("nothash456"),
 	}
 	err = repo.Update(ctx, updatedUser)
 	require.NoError(t, err)
@@ -140,8 +150,8 @@ func TestRepository_Update_NotFound(t *testing.T) {
 
 	updatedUser := &user.User{
 		ID:           1,
-		Username:     "alice",
-		PasswordHash: "nothash456",
+		Username:     zero.StringFrom("alice"),
+		PasswordHash: zero.StringFrom("nothash456"),
 	}
 
 	err := repo.Update(ctx, updatedUser)
@@ -153,16 +163,16 @@ func TestRepository_Update_AlreadyExists(t *testing.T) {
 	defer db.Close()
 
 	oldUser := &user.User{
-		Username:     "bob",
-		PasswordHash: "nothash456",
+		Username:     zero.StringFrom("bob"),
+		PasswordHash: zero.StringFrom("nothash456"),
 	}
 
 	_, err := repo.Create(ctx, oldUser)
 	require.NoError(t, err)
 
 	newUser := &user.User{
-		Username:     "alice",
-		PasswordHash: "hash456",
+		Username:     zero.StringFrom("alice"),
+		PasswordHash: zero.StringFrom("hash456"),
 	}
 
 	_, err = repo.Create(ctx, newUser)
@@ -170,8 +180,8 @@ func TestRepository_Update_AlreadyExists(t *testing.T) {
 
 	updatedUser := &user.User{
 		ID:           1,
-		Username:     "alice",
-		PasswordHash: "nothash456",
+		Username:     zero.StringFrom("alice"),
+		PasswordHash: zero.StringFrom("nothash456"),
 	}
 
 	err = repo.Update(ctx, updatedUser)
@@ -183,8 +193,8 @@ func TestRepository_Delete_Success(t *testing.T) {
 	defer db.Close()
 
 	newUser := &user.User{
-		Username:     "bob",
-		PasswordHash: "hash456",
+		Username:     zero.StringFrom("bob"),
+		PasswordHash: zero.StringFrom("hash456"),
 		CreatedAt:    time.Now(),
 	}
 

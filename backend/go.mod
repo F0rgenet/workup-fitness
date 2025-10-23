@@ -14,6 +14,7 @@ require (
 )
 
 require (
+	github.com/guregu/null/v6 v6.0.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mfridman/interpolate v0.0.2 // indirect

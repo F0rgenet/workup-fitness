@@ -11,6 +11,7 @@ import (
 
 	"workup_fitness/config"
 	"workup_fitness/domain/auth"
+	"workup_fitness/domain/simulator"
 	"workup_fitness/domain/user"
 	"workup_fitness/pkg/logger"
 )
@@ -36,9 +37,14 @@ func main() {
 	authService := auth.NewService(userService)
 	authHandler := auth.NewHandler(authService, config.JwtSecret)
 
+	simulatorRepo := simulator.NewSQLiteRepository(db)
+	simulatorService := simulator.NewService(simulatorRepo)
+	simulatorHandler := simulator.NewHandler(simulatorService)
+
 	r := chi.NewRouter()
 	user.RegisterRoutes(r, userHandler)
 	auth.RegisterRoutes(r, authHandler)
+	simulator.RegisterRoutes(r, simulatorHandler)
 
 	log.Info().Msg("Starting server on port " + config.Port)
 	err = http.ListenAndServe(fmt.Sprintf(":%s", config.Port), r)

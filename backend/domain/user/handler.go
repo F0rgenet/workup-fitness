@@ -12,24 +12,20 @@ import (
 	"workup_fitness/pkg/httpx"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/guregu/null/v6/zero"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
 )
 
-type ServiceInterface interface {
-	GetByID(ctx context.Context, id int) (*User, error)
-	Update(ctx context.Context, user *User) error
-	Delete(ctx context.Context, id int) error
-}
-
 type Handler struct {
-	service ServiceInterface
+	service Service
 }
 
-func NewHandler(service ServiceInterface) *Handler {
+func NewHandler(service Service) *Handler {
 	log.Info().Msg("Creating user handler...")
-	defer log.Info().Msg("Created user handler")
-	return &Handler{service: service}
+	res := &Handler{service: service}
+	log.Info().Msg("Created user handler")
+	return res
 }
 
 func getContextUserID(ctx context.Context) (int, error) {
@@ -138,23 +134,23 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 	user := &User{
 		ID:           userID,
-		Username:     "",
-		PasswordHash: "",
+		Username:     zero.StringFrom(""),
+		PasswordHash: zero.StringFrom(""),
 	}
 
 	// TODO: Вынести в ChangePassword в auth, заменить на UpdateUsername
 
-	if req.Password != "" {
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if req.Password.String != "" {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password.String), bcrypt.DefaultCost)
 		if err != nil {
 			httpx.InternalServerError(w, err)
 			return
 		}
 
-		user.PasswordHash = string(hashedPassword)
+		user.PasswordHash = zero.StringFrom(string(hashedPassword))
 	}
 
-	if req.Username != "" {
+	if req.Username.String != "" {
 		user.Username = req.Username
 	}
 

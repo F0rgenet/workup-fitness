@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/guregu/null/v6/zero"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	"golang.org/x/crypto/bcrypt"
@@ -25,8 +26,8 @@ func TestRegister_Success(t *testing.T) {
 		DoAndReturn(func(ctx context.Context, username, passwordHash string) (*user.User, error) {
 			return &user.User{
 				ID:           1,
-				Username:     username,
-				PasswordHash: passwordHash,
+				Username:     zero.StringFrom(username),
+				PasswordHash: zero.StringFrom(passwordHash),
 				CreatedAt:    time.Now(),
 			}, nil
 		})
@@ -37,7 +38,7 @@ func TestRegister_Success(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, "testuser", result.Username)
-	require.NoError(t, bcrypt.CompareHashAndPassword([]byte(result.PasswordHash), []byte("password123")))
+	require.NoError(t, bcrypt.CompareHashAndPassword([]byte(result.PasswordHash.String), []byte("password123")))
 }
 
 func TestRegister_EmptyUsername(t *testing.T) {
@@ -96,8 +97,8 @@ func TestLogin_Success(t *testing.T) {
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
 	expectedUser := &user.User{
 		ID:           1,
-		Username:     "testuser",
-		PasswordHash: string(hashedPassword),
+		Username:     zero.StringFrom("testuser"),
+		PasswordHash: zero.StringFrom(string(hashedPassword)),
 		CreatedAt:    time.Now(),
 	}
 
@@ -144,8 +145,8 @@ func TestLogin_WrongPassword(t *testing.T) {
 		GetByUsername(gomock.Any(), "testuser").
 		Return(&user.User{
 			ID:           1,
-			Username:     "testuser",
-			PasswordHash: string(hashedPassword),
+			Username:     zero.StringFrom("testuser"),
+			PasswordHash: zero.StringFrom(string(hashedPassword)),
 			CreatedAt:    time.Now(),
 		}, nil)
 

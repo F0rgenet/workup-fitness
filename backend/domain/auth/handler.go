@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -13,17 +12,12 @@ import (
 	"workup_fitness/pkg/httpx"
 )
 
-type ServiceInterface interface {
-	Register(ctx context.Context, username, password string) (*user.User, error)
-	Login(ctx context.Context, username, password string) (*user.User, error)
-}
-
 type Handler struct {
-	service ServiceInterface
+	service Service
 	secret  string
 }
 
-func NewHandler(service ServiceInterface, secret string) *Handler {
+func NewHandler(service Service, secret string) *Handler {
 	log.Info().Msg("Creating auth handler...")
 	defer log.Info().Msg("Created auth handler")
 	return &Handler{service: service, secret: secret}
@@ -61,13 +55,13 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.service.Register(r.Context(), req.Username, req.Password)
+	user, err := h.service.Register(r.Context(), req.Username.String, req.Password.String)
 	if err != nil {
 		httpx.InternalServerError(w, err)
 		return
 	}
 
-	log.Info().Msgf("Registered user with username %s", req.Username)
+	log.Info().Msgf("Registered user with username %s", req.Username.String)
 
 	resp, err := prepareAuthReponse(user, h.secret)
 	if err != nil {
@@ -81,7 +75,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Info().Msgf("Registered user with username %s", req.Username)
+	log.Info().Msgf("Registered user with username %s", req.Username.String)
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
@@ -97,13 +91,13 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.service.Login(r.Context(), req.Username, req.Password)
+	user, err := h.service.Login(r.Context(), req.Username.String, req.Password.String)
 	if err != nil {
 		httpx.InternalServerError(w, err)
 		return
 	}
 
-	log.Info().Msgf("Logged in user with username %s", req.Username)
+	log.Info().Msgf("Logged in user with username %s", req.Username.String)
 
 	resp, err := prepareAuthReponse(user, h.secret)
 	if err != nil {
@@ -117,5 +111,5 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Info().Msgf("Logged in user with username %s", req.Username)
+	log.Info().Msgf("Logged in user with username %s", req.Username.String)
 }

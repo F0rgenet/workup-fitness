@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/guregu/null/v6/zero"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
@@ -26,7 +27,7 @@ func TestRegisterHandler_Success(t *testing.T) {
 
 	expectedUser := &user.User{
 		ID:        1,
-		Username:  "testuser",
+		Username:  zero.StringFrom("testuser"),
 		CreatedAt: time.Now(),
 	}
 
@@ -34,7 +35,10 @@ func TestRegisterHandler_Success(t *testing.T) {
 		Register(gomock.Any(), "testuser", "password123").
 		Return(expectedUser, nil)
 
-	reqBody := RegisterRequest{Username: "testuser", Password: "password123"}
+	reqBody := RegisterRequest{
+		Username: zero.StringFrom("testuser"),
+		Password: zero.StringFrom("password123"),
+	}
 	body, _ := json.Marshal(reqBody)
 
 	req := httptest.NewRequest(http.MethodPost, "/register", bytes.NewReader(body))
@@ -47,7 +51,7 @@ func TestRegisterHandler_Success(t *testing.T) {
 
 	var resp AuthResponse
 	require.NoError(t, json.NewDecoder(rr.Body).Decode(&resp))
-	require.Equal(t, "testuser", resp.User.Username)
+	require.Equal(t, "testuser", resp.User.Username.String)
 	require.NotEmpty(t, resp.Token)
 
 	token, err := jwt.Parse(resp.Token, func(token *jwt.Token) (interface{}, error) {
@@ -83,7 +87,10 @@ func TestRegisterHandler_ServiceError(t *testing.T) {
 		Register(gomock.Any(), "testuser", "password123").
 		Return(nil, errors.New("username already exists"))
 
-	reqBody := RegisterRequest{Username: "testuser", Password: "password123"}
+	reqBody := RegisterRequest{
+		Username: zero.StringFrom("testuser"),
+		Password: zero.StringFrom("password123"),
+	}
 	body, _ := json.Marshal(reqBody)
 	req := httptest.NewRequest(http.MethodPost, "/register", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -116,7 +123,7 @@ func TestLoginHandler_Success(t *testing.T) {
 
 	expectedUser := &user.User{
 		ID:        1,
-		Username:  "testuser",
+		Username:  zero.StringFrom("testuser"),
 		CreatedAt: time.Now(),
 	}
 
@@ -124,7 +131,10 @@ func TestLoginHandler_Success(t *testing.T) {
 		Login(gomock.Any(), "testuser", "password123").
 		Return(expectedUser, nil)
 
-	reqBody := LoginRequest{Username: "testuser", Password: "password123"}
+	reqBody := LoginRequest{
+		Username: zero.StringFrom("testuser"),
+		Password: zero.StringFrom("password123"),
+	}
 	body, _ := json.Marshal(reqBody)
 
 	req := httptest.NewRequest(http.MethodPost, "/login", bytes.NewReader(body))
@@ -137,7 +147,7 @@ func TestLoginHandler_Success(t *testing.T) {
 
 	var resp AuthResponse
 	require.NoError(t, json.NewDecoder(rr.Body).Decode(&resp))
-	require.Equal(t, "testuser", resp.User.Username)
+	require.Equal(t, "testuser", resp.User.Username.String)
 	require.NotEmpty(t, resp.Token)
 
 	token, err := jwt.Parse(resp.Token, func(token *jwt.Token) (interface{}, error) {
@@ -173,7 +183,10 @@ func TestLoginHandler_ServiceError(t *testing.T) {
 		Login(gomock.Any(), "testuser", "wrongpassword").
 		Return(nil, ErrInvalidCreds)
 
-	reqBody := LoginRequest{Username: "testuser", Password: "wrongpassword"}
+	reqBody := LoginRequest{
+		Username: zero.StringFrom("testuser"),
+		Password: zero.StringFrom("wrongpassword"),
+	}
 	body, _ := json.Marshal(reqBody)
 
 	req := httptest.NewRequest(http.MethodPost, "/login", bytes.NewReader(body))
@@ -201,7 +214,7 @@ func TestLoginHandler_MethodNotAllowed(t *testing.T) {
 func TestPrepareAuthResponse_Success(t *testing.T) {
 	testUser := &user.User{
 		ID:        1,
-		Username:  "testuser",
+		Username:  zero.StringFrom("testuser"),
 		CreatedAt: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 	}
 
@@ -209,7 +222,7 @@ func TestPrepareAuthResponse_Success(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, 1, resp.User.ID)
-	require.Equal(t, "testuser", resp.User.Username)
+	require.Equal(t, "testuser", resp.User.Username.String)
 	require.NotEmpty(t, resp.Token)
 
 	token, err := jwt.Parse(resp.Token, func(token *jwt.Token) (interface{}, error) {

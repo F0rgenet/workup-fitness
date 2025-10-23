@@ -3,9 +3,7 @@ package user
 import (
 	"context"
 	"database/sql"
-	"errors"
-
-	"github.com/mattn/go-sqlite3"
+	"workup_fitness/internal/dbutil"
 )
 
 //go:generate mockgen -destination=mocks/mock_repository.go -package=mocks workup_fitness/domain/user Repository
@@ -31,13 +29,7 @@ func (repo *sqliteRepository) Create(ctx context.Context, user *User) (int, erro
 		`INSERT INTO users (username, password_hash) VALUES (?, ?)`,
 		user.Username, user.PasswordHash,
 	)
-	if err != nil {
-		var sqliteErr sqlite3.Error
-		if errors.As(err, &sqliteErr) {
-			if sqliteErr.Code == sqlite3.ErrConstraint {
-				return 0, ErrAlreadyExists
-			}
-		}
+	if err := dbutil.ProcessInsertError(err, ErrAlreadyExists, ErrMissingField); err != nil {
 		return 0, err
 	}
 
@@ -55,10 +47,7 @@ func (repo *sqliteRepository) GetByID(ctx context.Context, id int) (*User, error
 		id,
 	)
 	err := row.Scan(&user.ID, &user.Username, &user.PasswordHash, &user.CreatedAt)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrUserNotFound
-		}
+	if err := dbutil.ProcessRowError(err, ErrUserNotFound); err != nil {
 		return nil, err
 	}
 	return &user, nil
@@ -71,10 +60,7 @@ func (repo *sqliteRepository) GetByUsername(ctx context.Context, username string
 		username,
 	)
 	err := row.Scan(&user.ID, &user.Username, &user.PasswordHash, &user.CreatedAt)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrUserNotFound
-		}
+	if err := dbutil.ProcessRowError(err, ErrUserNotFound); err != nil {
 		return nil, err
 	}
 	return &user, nil
@@ -85,24 +71,15 @@ func (repo *sqliteRepository) Update(ctx context.Context, user *User) error {
 		`UPDATE users SET username = ?, password_hash = ? WHERE id = ?`,
 		user.Username, user.PasswordHash, user.ID,
 	)
-	if err != nil {
-		var sqliteErr sqlite3.Error
-		if errors.As(err, &sqliteErr) {
-			if sqliteErr.Code == sqlite3.ErrConstraint {
-				return ErrAlreadyExists
-			}
-		}
+	if err := dbutil.ProcessInsertError(err, ErrAlreadyExists, ErrMissingField); err != nil {
 		return err
-	}
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return ErrUserNotFound
 	}
 
-	return nil
+	rows, err := result.RowsAffected()
+	if rows == 0 {
+		err = ErrUserNotFound
+	}
+	return err
 }
 
 func (repo *sqliteRepository) Delete(ctx context.Context, id int) error {
@@ -114,12 +91,9 @@ func (repo *sqliteRepository) Delete(ctx context.Context, id int) error {
 		return err
 	}
 	rows, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
 	if rows == 0 {
-		return ErrUserNotFound
+		err = ErrUserNotFound
 	}
 
-	return nil
+	return err
 }

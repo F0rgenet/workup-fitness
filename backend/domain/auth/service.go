@@ -65,7 +65,7 @@ func (s *serviceImpl) Login(ctx context.Context, username, password string) (*us
 		return nil, ErrInvalidCreds
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
+	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash.String), []byte(password))
 	if err != nil {
 		return nil, ErrInvalidCreds
 	}

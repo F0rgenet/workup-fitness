@@ -2,8 +2,8 @@ package user
 
 import (
 	"context"
-	"errors"
 
+	"github.com/guregu/null/v6/zero"
 	"github.com/rs/zerolog/log"
 )
 
@@ -23,54 +23,51 @@ type serviceImpl struct {
 
 func NewService(repo Repository) *serviceImpl {
 	log.Info().Msg("Creating user service...")
-	defer log.Info().Msg("Created user service")
-	return &serviceImpl{repo: repo}
+	res := &serviceImpl{repo: repo}
+	log.Info().Msg("Created user service")
+	return res
 }
 
 func (s *serviceImpl) Create(ctx context.Context, username, passwordHash string) (*User, error) {
-	defer log.Info().Msgf("Created user with username %s", username)
 	log.Info().Msgf("Creating user with username %s", username)
 
-	if username == "" {
-		return nil, errors.Join(ErrMissingField, errors.New("username is required"))
-	}
-	if passwordHash == "" {
-		return nil, errors.Join(ErrMissingField, errors.New("passwordHash is required"))
-	}
-	user := &User{Username: username, PasswordHash: passwordHash}
+	newName := zero.StringFromPtr(&username)
+	newPasswordHash := zero.StringFromPtr(&passwordHash)
+
+	user := &User{Username: newName, PasswordHash: newPasswordHash}
 	createdID, err := s.repo.Create(ctx, user)
 	if err != nil {
 		return nil, err
 	}
 	user.ID = createdID
+	log.Info().Msgf("Created user with username %s", username)
 	return user, nil
 }
 
 func (s *serviceImpl) GetByID(ctx context.Context, id int) (*User, error) {
-	defer log.Info().Msgf("Got user by id %d", id)
 	log.Info().Msgf("Getting user by id %d", id)
-	return s.repo.GetByID(ctx, id)
+	user, err := s.repo.GetByID(ctx, id)
+	log.Info().Msgf("Got user by id %d", id)
+	return user, err
 }
 
 func (s *serviceImpl) GetByUsername(ctx context.Context, username string) (*User, error) {
-	defer log.Info().Msgf("Got user by username %s", username)
 	log.Info().Msgf("Getting user by username %s", username)
-	return s.repo.GetByUsername(ctx, username)
+	user, err := s.repo.GetByUsername(ctx, username)
+	log.Info().Msgf("Got user by username %s", username)
+	return user, err
 }
 
 func (s *serviceImpl) Update(ctx context.Context, user *User) error {
-	defer log.Info().Msgf("Updated user with id %d", user.ID)
 	log.Info().Msgf("Updating user with id %d", user.ID)
-
-	if user.Username == "" && user.PasswordHash == "" {
-		return errors.Join(ErrMissingField, errors.New("username or passwordHash are required"))
-	}
-
-	return s.repo.Update(ctx, user)
+	err := s.repo.Update(ctx, user)
+	log.Info().Msgf("Updated user with id %d", user.ID)
+	return err
 }
 
 func (s *serviceImpl) Delete(ctx context.Context, id int) error {
-	defer log.Info().Msgf("Deleted user with id %d", id)
 	log.Info().Msgf("Deleting user with id %d", id)
-	return s.repo.Delete(ctx, id)
+	err := s.repo.Delete(ctx, id)
+	log.Info().Msgf("Deleted user with id %d", id)
+	return err
 }
