@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/go-chi/chi/v5"
 	_ "github.com/mattn/go-sqlite3"
@@ -22,12 +23,14 @@ func main() {
 
 	db, err := sql.Open("sqlite3", "./database.sqlite")
 	if err != nil {
-		log.Error().Msg(err.Error())
+		log.Error().Err(err).Msg("failed to open database")
+		os.Exit(1)
 	}
 	defer db.Close()
 
 	if err := db.Ping(); err != nil {
 		log.Error().Msg(err.Error())
+		os.Exit(1)
 	}
 
 	userRepo := user.NewSQLiteRepository(db)
